@@ -3,3 +3,5 @@ version: "1.0.0"
 description: "为运营稿件上传、设计和生成小红书封面"
 provides_tools:
   - cover_generate
+python_dependencies:
+  - "Pillow>=13,<14"

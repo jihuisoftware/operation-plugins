@@ -1,6 +1,7 @@
-import { createElement as h, useEffect, useRef, useState } from 'react'
+import { createElement as h, useEffect, useId, useRef, useState } from 'react'
 
 function Designer({ title: originalTitle, latest, detail, start, apply, image }) {
+  const styleList = useId()
   const [title, setTitle] = useState(originalTitle)
   const [subtitle, setSubtitle] = useState('')
   const [style, setStyle] = useState('清爽编辑风')
@@ -67,7 +68,7 @@ function Designer({ title: originalTitle, latest, detail, start, apply, image })
     })
   }
   const field = (label, element) => h('label', { className: 'grid gap-1 text-sm' }, label, element)
-  const text = (value, change, maxLength) => h('input', { className: 'rounded border bg-background p-2', value, maxLength,
+  const text = (value, change, maxLength, list) => h('input', { className: 'rounded border bg-background p-2', value, maxLength, list,
     onChange: e => change(e.target.value) })
   const button = (label, action, disabled) => h('button', { type: 'button', className: 'rounded border px-3 py-2',
     disabled: !!(busy || pending || disabled), onClick: action }, label)
@@ -84,7 +85,8 @@ function Designer({ title: originalTitle, latest, detail, start, apply, image })
     mode !== 'upload' && field('副标题', text(subtitle, setSubtitle, 120)),
     mode !== 'upload' && field('横向裁切位置',slider(x,setX)),
     mode !== 'upload' && field('纵向裁切位置',slider(y,setY)),
-    mode === 'ai' && field('底图风格',text(style,setStyle,400)),
+    mode === 'ai' && field('底图风格',text(style,setStyle,400,styleList)),
+    mode === 'ai' && h('datalist', { id: styleList }, ...['清爽编辑风','水彩插画','自然摄影','复古印刷'].map(value=>h('option',{key:value,value}))),
     button(mode === 'ai' ? (job?.background ? '重新生成底图（调用生图服务）' : '生成底图（调用生图服务）') : '预览上传图片',
       () => generate(mode), mode !== 'ai' && (!file || !authorized)),
     mode !== 'upload' && job?.background && button('复用上张底图重新排版', () => generate('reuse')),
