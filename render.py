@@ -21,19 +21,16 @@ def text_block(draw, text, path, face, maximum, box_height):
 
 
 def compose(folder, spec):
-    from hermes_platform.fonts import chinese_font, chinese_font_index
     with Image.open(folder / 'input') as picture:
         image = ImageOps.fit(ImageOps.exif_transpose(picture).convert('RGB'), (1080, 1440),
                              centering=(spec['x'], spec['y']))
-    path = chinese_font()
-    if path is None:
-        raise ValueError('请安装中文字体后重新生成封面')
+    path = spec['font_path']
     panel = Image.new('RGBA', image.size)
     draw = ImageDraw.Draw(panel)
     draw.rectangle((0, 920, 1080, 1440), fill=(12, 18, 26, 200))
     for text, top, size, height in ((spec['title'], 972, 86, 248), (spec['subtitle'], 1272, 46, 112)):
         if text:
-            value, font = text_block(draw, text, path, chinese_font_index(path), size, height)
+            value, font = text_block(draw, text, path, spec['font_face'], size, height)
             draw.multiline_text((64, top), value, font=font, fill='white', spacing=8)
     image.paste(panel, mask=panel.getchannel('A'))
     image.save(folder / 'cover.jpg', quality=92)

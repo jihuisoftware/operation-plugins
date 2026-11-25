@@ -21,4 +21,4 @@ def register(ctx):
                       schema={'name': 'cover_generate', 'description': '合成已授权任务的封面',
                               'parameters': {'type': 'object', 'properties': {'ticket': {'type': 'string'}},
                                              'required': ['ticket']}},
-                      handler=generate, check_fn=lambda: False)
+                      handler=generate)
