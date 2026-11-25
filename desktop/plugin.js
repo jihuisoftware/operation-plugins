@@ -1,6 +1,6 @@
 import { createElement as h, useEffect, useRef, useState } from 'react'
 
-function Designer({ title: originalTitle, latest, start, apply, image }) {
+function Designer({ title: originalTitle, latest, detail, start, apply, image }) {
   const [title, setTitle] = useState(originalTitle)
   const [subtitle, setSubtitle] = useState('')
   const [style, setStyle] = useState('清爽编辑风')
@@ -14,25 +14,36 @@ function Designer({ title: originalTitle, latest, start, apply, image }) {
   const [busy, setBusy] = useState(false)
   const lock = useRef(false)
   const sequence = useRef(0)
+  const unresolved = useRef(null)
   const read = useRef(latest)
+  const poll = useRef(detail)
   read.current = latest
+  poll.current = detail
   useEffect(() => {
+    let active = true
+    const turn = sequence.current
+    read.current().then(current => {
+      if (active && turn === sequence.current) setJob(current)
+    }).catch(error => { if (active) setNotice(String(error)) })
+    return () => { active = false }
+  }, [])
+  const pending = job && ['queued', 'running'].includes(job.state)
+  useEffect(() => {
+    if (!pending) return
     let active = true
     let timer
     async function observe() {
-      const turn = sequence.current
       try {
-        const current = await read.current()
-        if (active && turn === sequence.current && !lock.current) setJob(current)
+        const current = await poll.current(job.id)
+        if (active) setJob(current)
       } catch (error) {
         if (active) setNotice(String(error))
       }
-      if (active) timer = setTimeout(observe, 2500)
+      if (active) timer = setTimeout(observe, 2000)
     }
-    void observe()
+    timer = setTimeout(observe, 600)
     return () => { active = false; clearTimeout(timer) }
-  }, [])
-  const pending = job && ['queued', 'running'].includes(job.state)
+  }, [pending, job?.id])
   async function perform(fn) {
     if (lock.current) return
     lock.current = true
@@ -44,11 +55,14 @@ function Designer({ title: originalTitle, latest, start, apply, image }) {
   }
   function generate(type) {
     return perform(async () => {
-      const next = await start({
-        request_id: crypto.randomUUID(), mode: type, title, subtitle, style, x, y,
+      const payload = { mode: type, title, subtitle, style, x, y,
         ...(type === 'reuse' ? { previous: job.id } : {}),
         ...(type === 'upload' || type === 'background' ? { file, authorized } : {})
-      })
+      }
+      const key = JSON.stringify([type, title, subtitle, style, x, y, payload.previous, file?.name, file?.size, file?.lastModified])
+      if (unresolved.current?.key !== key) unresolved.current = { key, id: crypto.randomUUID() }
+      const next = await start({ ...payload, request_id: unresolved.current.id })
+      unresolved.current = null
       setJob(next)
     })
   }
