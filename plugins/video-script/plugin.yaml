@@ -1,0 +1,5 @@
+name: video-script
+version: "1.0.0"
+description: "把中文定稿改编成 30 秒或 60 秒短视频拍摄分镜表"
+provides_tools:
+  - video_script_generate

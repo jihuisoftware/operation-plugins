@@ -5,6 +5,7 @@
 | 插件 | 用途 |
 | --- | --- |
 | [封面设计](plugins/cover-designer/README.md) | 由 Agent 为稿件选择封面风格、生成候选并依据实图评审修订 |
+| [短视频分镜](plugins/video-script/README.md) | 将中文定稿改编成 30 秒或 60 秒的拍摄表，逐镜列出口播、画面、字幕和原文依据 |
 
 ## 安装封面设计
 
