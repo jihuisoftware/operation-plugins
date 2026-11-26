@@ -1,11 +1,9 @@
-import { createElement as h, useEffect, useId, useRef, useState } from 'react'
+import { createElement as h, useEffect, useRef, useState } from 'react'
 
 function Designer({ title: originalTitle, latest, detail, start, apply, image }) {
-  const styleList = useId()
   const [title, setTitle] = useState(originalTitle)
   const [subtitle, setSubtitle] = useState('')
-  const [style, setStyle] = useState('清爽编辑风')
-  const [mode, setMode] = useState('upload')
+  const [mode, setMode] = useState('ai')
   const [file, setFile] = useState(null)
   const [authorized, authorize] = useState(false)
   const [x, setX] = useState(0.5)
@@ -56,11 +54,11 @@ function Designer({ title: originalTitle, latest, detail, start, apply, image })
   }
   function generate(type) {
     return perform(async () => {
-      const payload = { mode: type, title, subtitle, style, x, y,
+      const payload = { mode: type, title, subtitle, x, y,
         ...(type === 'reuse' ? { previous: job.id } : {}),
         ...(type === 'upload' || type === 'background' ? { file, authorized } : {})
       }
-      const key = JSON.stringify([type, title, subtitle, style, x, y, payload.previous, file?.name, file?.size, file?.lastModified])
+      const key = JSON.stringify([type, title, subtitle, x, y, payload.previous, file?.name, file?.size, file?.lastModified])
       if (unresolved.current?.key !== key) unresolved.current = { key, id: crypto.randomUUID() }
       const next = await start({ ...payload, request_id: unresolved.current.id })
       unresolved.current = null
@@ -77,7 +75,7 @@ function Designer({ title: originalTitle, latest, detail, start, apply, image })
   return h('section', { className: 'grid gap-3 rounded border p-3' },
     h('h3', null, '封面设计'),
     field('图片来源', h('select', { value: mode, onChange: e => setMode(e.target.value) },
-      ...[['upload','上传成品封面'], ['background','上传底图并排版'], ['ai','AI 生成底图']].map(([value,label]) => h('option',{key:value,value},label)))),
+      ...[['upload','上传成品封面'], ['background','上传底图并排版'], ['ai','Agent 自动设计']].map(([value,label]) => h('option',{key:value,value},label)))),
     mode !== 'ai' && field('选择 PNG、JPEG 或 WebP', h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp',
       onChange: e => { setFile(e.target.files[0]); authorize(false) } })),
     mode !== 'ai' && field('我有权使用这张图片', h('input',{type:'checkbox',checked:authorized,onChange:e=>authorize(e.target.checked)})),
@@ -85,12 +83,14 @@ function Designer({ title: originalTitle, latest, detail, start, apply, image })
     mode !== 'upload' && field('副标题', text(subtitle, setSubtitle, 120)),
     mode !== 'upload' && field('横向裁切位置',slider(x,setX)),
     mode !== 'upload' && field('纵向裁切位置',slider(y,setY)),
-    mode === 'ai' && field('底图风格',text(style,setStyle,400,styleList)),
-    mode === 'ai' && h('datalist', { id: styleList }, ...['清爽编辑风','水彩插画','自然摄影','复古印刷'].map(value=>h('option',{key:value,value}))),
-    button(mode === 'ai' ? (job?.background ? '重新生成底图（调用生图服务）' : '生成底图（调用生图服务）') : '预览上传图片',
+    button(mode === 'ai' ? '生成封面' : '预览上传图片',
       () => generate(mode), mode !== 'ai' && (!file || !authorized)),
     mode !== 'upload' && job?.background && button('复用上张底图重新排版', () => generate('reuse')),
     pending && h('p',{role:'status'},'正在生成，稍后可回到本稿查看'),
+    job?.rounds?.length > 0 && h('details',null,h('summary',null,'查看评审详情'),...job.rounds.map((round,i)=>h('div',{key:i},
+      h('p',null,'第 '+(i+1)+' 轮 · '+round.design.template+' · '+round.reason),
+      image(round.asset_id), h('p',null,round.review.reason),
+      !pending && !round.review.pass && button('人工选用这一版',()=>perform(async()=>{await apply(job.id,round.asset_id);setNotice('已选用，待人工审核')})), ...(round.review.issues || []).map((issue,n)=>h('p',{key:n},String(issue)))))),
     job?.error && h('p',{role:'alert'}, job.error),
     job?.state === 'completed' && h('div', null, h('p',null,'候选封面'), image(job.asset_id),
       button('应用这张候选封面',()=>perform(async()=>{await apply(job.id);setNotice('封面已应用')}))),

@@ -12,10 +12,27 @@ def generate(args, **kwargs):
         raise ValueError('无效的封面任务')
     folder = plugin_data_dir('cover-designer') / 'exchange' / ticket
     spec = json.loads((folder / 'request.json').read_text(encoding='utf-8'))
-    if spec['phase'] == 'background':
-        prompt = (f"绘制一张小红书竖版封面底图。主题：{spec['title']}。风格：{spec['style']}。"
-                  "重要画面置于中央偏上，下方留出排版区域。画面不含文字、水印或商标。")
-        return json.dumps({'ticket': ticket, 'prompt': prompt}, ensure_ascii=False)
+    if spec['phase'] == 'design':
+        from .design_agent import select
+        return json.dumps({'ticket': ticket, **select(spec['brief'])}, ensure_ascii=False)
+    if spec['phase'] == 'template':
+        from .cover_renderer import render
+        from .cover_variants import cover_font
+        design = spec['design']
+        font = cover_font(design)
+        if not font:
+            raise ValueError('缺少中文字体')
+        raw, _ = render(design, font)
+        (folder / 'cover.png').write_bytes(raw)
+        return json.dumps({'ticket': ticket})
+    if spec['phase'] == 'generate_background':
+        from .background import generate, image_bytes
+        raw = image_bytes(generate(spec['prompt'], aspect_ratio='portrait'))
+        (folder / 'background.png').write_bytes(raw)
+        return json.dumps({'ticket': ticket})
+    if spec['phase'] == 'review':
+        from .review import review
+        return json.dumps({'ticket': ticket, **review(folder, spec)}, ensure_ascii=False)
     if spec['phase'] != 'compose':
         raise ValueError('未知封面设计阶段')
     compose(folder, spec)

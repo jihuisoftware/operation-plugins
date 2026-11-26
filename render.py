@@ -27,10 +27,11 @@ def compose(folder, spec):
     path = spec['font_path']
     panel = Image.new('RGBA', image.size)
     draw = ImageDraw.Draw(panel)
-    draw.rectangle((0, 920, 1080, 1440), fill=(12, 18, 26, 200))
+    offset = -920 if spec.get('panel') == 'top' else 0
+    draw.rectangle((0, 920 + offset, 1080, 1440 + offset), fill=(12, 18, 26, 200))
     for text, top, size, height in ((spec['title'], 972, 86, 248), (spec['subtitle'], 1272, 46, 112)):
         if text:
             value, font = text_block(draw, text, path, spec['font_face'], size, height)
-            draw.multiline_text((64, top), value, font=font, fill='white', spacing=8)
+            draw.multiline_text((64, top + offset), value, font=font, fill='white', spacing=8)
     image.paste(panel, mask=panel.getchannel('A'))
     image.save(folder / 'cover.jpg', quality=92)
